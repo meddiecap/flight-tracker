@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         upstreamRes = await fetch(upstream, { headers })
     } catch (err) {
         Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v))
-        return res.status(502).json({ error: "Bad Gateway", detail: String(err), upstream })
+        return res.status(502).json({ error: "Bad Gateway", detail: String(err), cause: String(err?.cause), upstream })
     }
 
     Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v))
