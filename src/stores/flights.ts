@@ -1,5 +1,5 @@
 import { defineStore } from "pinia"
-import { ref } from "vue"
+import { ref, triggerRef } from "vue"
 
 /**
  * Normalised aircraft state — altitude/geoAltitude in metres, velocity in m/s, verticalRate in m/s.
@@ -85,11 +85,18 @@ export const useFlightsStore = defineStore("flights", () => {
     const rateLimitCooldownUntil = ref(0)
 
     function updateAircraft(vectors: StateVector[]) {
-        const next = new Map<string, StateVector>()
+        const map = aircraft.value
+        const incoming = new Set<string>()
         for (const v of vectors) {
-            next.set(v.icao24, v)
+            incoming.add(v.icao24)
+            map.set(v.icao24, v)
         }
-        aircraft.value = next
+        // Remove aircraft no longer in the response
+        for (const key of map.keys()) {
+            if (!incoming.has(key)) map.delete(key)
+        }
+        // Manually trigger reactivity — ref does not track Map mutations
+        triggerRef(aircraft)
     }
 
     function selectFlight(icao24: string | null) {
