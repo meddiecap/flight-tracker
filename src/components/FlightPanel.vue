@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import { useFlightsStore } from "../stores/flights"
+import { estimateCo2 } from "../composables/useCo2"
 
 const store = useFlightsStore()
 const flight = computed(() => store.selectedFlight())
@@ -18,6 +19,12 @@ function heading(deg: number | null): string {
 
 function close() {
     store.selectFlight(null)
+}
+
+function fmtCo2(kghr: number): string {
+    if (kghr === 0) return "0\u00a0kg/h (on ground)"
+    if (kghr < 1000) return "~" + kghr.toFixed(0) + "\u00a0kg/h"
+    return "~" + (kghr / 1000).toFixed(1) + "\u00a0t/h"
 }
 </script>
 
@@ -86,8 +93,12 @@ function close() {
                     </dd>
                 </div>
                 <div class="col-span-2 border-t border-white/10 pt-3">
-                    <dt class="text-xs text-slate-400 uppercase tracking-wide">CO₂ estimate</dt>
-                    <dd class="text-slate-500 italic text-xs mt-0.5">Available in next release</dd>
+                    <dt class="text-xs text-slate-400 uppercase tracking-wide flex items-center gap-1">
+                        CO₂ estimate
+                        <span class="cursor-help text-slate-500"
+                            title="Rough estimate only — not scientifically accurate.">ⓘ</span>
+                    </dt>
+                    <dd class="text-slate-100 mt-0.5">{{ fmtCo2(estimateCo2(flight)) }}</dd>
                 </div>
             </dl>
         </aside>

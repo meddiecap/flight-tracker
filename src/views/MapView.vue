@@ -8,6 +8,7 @@ import { useInterpolation } from "../composables/useInterpolation"
 import { useFlightsStore } from "../stores/flights"
 import AircraftMarker from "../components/AircraftMarker.vue"
 import FlightPanel from "../components/FlightPanel.vue"
+import StatsBar from "../components/StatsBar.vue"
 
 const zoom = ref(5)
 const center = ref<[number, number]>([51.5, 10.0]) // centred over Europe
@@ -52,6 +53,7 @@ const interpolatedList = computed(() => Array.from(positions.value.values()))
                 :callsign="flightsStore.aircraft.get(pos.icao24)?.callsign ?? null" @click="onMarkerClick" />
         </LMap>
 
+        <StatsBar />
         <FlightPanel />
     </div>
 </template>
