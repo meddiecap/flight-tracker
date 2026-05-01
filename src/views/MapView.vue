@@ -1,9 +1,32 @@
 <script setup lang="ts">
-// Phase 2: full-screen map
+import { ref } from "vue"
+import { LMap, LTileLayer } from "@vue-leaflet/vue-leaflet"
+import "leaflet/dist/leaflet.css"
+
+const zoom = ref(5)
+const center = ref<[number, number]>([51.5, 10.0]) // centred over Europe
+
+const tileUrl =
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+const tileAttribution =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 </script>
 
 <template>
-  <div class="w-full h-dvh bg-gray-900 flex items-center justify-center text-white">
-    <span>Map coming in Phase 2</span>
+  <div class="w-full h-dvh">
+    <LMap
+      :zoom="zoom"
+      :center="center"
+      :use-global-leaflet="false"
+      class="w-full h-full"
+    >
+      <LTileLayer
+        :url="tileUrl"
+        :attribution="tileAttribution"
+        layer-type="base"
+        name="CartoDB Dark"
+        :max-zoom="19"
+      />
+    </LMap>
   </div>
 </template>
