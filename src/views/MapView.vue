@@ -5,10 +5,10 @@ import type { Map as LeafletMap } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { useOpenSky } from "../composables/useOpenSky"
 import { useAircraftLayer } from "../composables/useAircraftLayer"
+import { useAirportLayer } from "../composables/useAirportLayer"
 import { useFlightsStore } from "../stores/flights"
 import FlightPanel from "../components/FlightPanel.vue"
 import StatsBar from "../components/StatsBar.vue"
-import AirportMarker from "../components/AirportMarker.vue"
 import { useAirportsStore } from "../stores/airports"
 
 const zoom = ref(5)
@@ -23,6 +23,7 @@ const flightsStore = useFlightsStore()
 const airportsStore = useAirportsStore()
 const { start: startPolling } = useOpenSky()
 const aircraftLayer = useAircraftLayer()
+const airportLayer = useAirportLayer()
 
 // After each poll: update aircraft markers and airports nearby count
 watch(
@@ -33,9 +34,18 @@ watch(
     },
 )
 
+// Sync airport markers whenever visible set or nearby counts change
+watch(
+    () => [airportsStore.visibleAirports, airportsStore.nearbyCountMap] as const,
+    ([airports, countMap]) => {
+        airportLayer.setVisible(airports, countMap)
+    },
+)
+
 function onMapReady(map: LeafletMap) {
     startPolling(map)
     aircraftLayer.mount(map, (icao24) => flightsStore.selectFlight(icao24))
+    airportLayer.mount(map)
     const syncBounds = () => {
         const b = map.getBounds()
         airportsStore.setViewBounds(b.getSouth(), b.getNorth(), b.getWest(), b.getEast())
@@ -46,7 +56,10 @@ function onMapReady(map: LeafletMap) {
     map.on("zoomend", syncBounds)
 }
 
-onUnmounted(() => aircraftLayer.unmount())
+onUnmounted(() => {
+    aircraftLayer.unmount()
+    airportLayer.unmount()
+})
 </script>
 
 <template>
@@ -56,13 +69,9 @@ onUnmounted(() => aircraftLayer.unmount())
             <LTileLayer :url="tileUrl" :attribution="tileAttribution" layer-type="base" name="CartoDB Dark"
                 :max-zoom="19" />
 
-            <AirportMarker v-for="ap in airportsStore.visibleAirports" :key="ap.icao" :icao="ap.icao" :iata="ap.iata"
-                :name="ap.name" :lat="ap.lat" :lng="ap.lng"
-                :nearby-count="airportsStore.nearbyCountMap.get(ap.icao) ?? 0" />
         </LMap>
 
         <StatsBar />
         <FlightPanel />
     </div>
 </template>
-
