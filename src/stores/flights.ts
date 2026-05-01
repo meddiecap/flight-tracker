@@ -33,23 +33,23 @@ export interface StateVector {
  * https://openskynetwork.github.io/opensky-api/rest.html#response
  */
 export type RawVector = [
-    string,          // 0  icao24
-    string | null,   // 1  callsign
-    string,          // 2  origin_country
-    number | null,   // 3  time_position
-    number,          // 4  last_contact
-    number | null,   // 5  longitude
-    number | null,   // 6  latitude
-    number | null,   // 7  baro_altitude  (metres)
-    boolean,         // 8  on_ground
-    number | null,   // 9  velocity       (m/s)
-    number | null,   // 10 true_track     (degrees)
-    number | null,   // 11 vertical_rate  (m/s)
+    string, // 0  icao24
+    string | null, // 1  callsign
+    string, // 2  origin_country
+    number | null, // 3  time_position
+    number, // 4  last_contact
+    number | null, // 5  longitude
+    number | null, // 6  latitude
+    number | null, // 7  baro_altitude  (metres)
+    boolean, // 8  on_ground
+    number | null, // 9  velocity       (m/s)
+    number | null, // 10 true_track     (degrees)
+    number | null, // 11 vertical_rate  (m/s)
     number[] | null, // 12 sensors
-    number | null,   // 13 geo_altitude   (metres)
-    string | null,   // 14 squawk
-    boolean,         // 15 spi
-    number,          // 16 position_source
+    number | null, // 13 geo_altitude   (metres)
+    string | null, // 14 squawk
+    boolean, // 15 spi
+    number, // 16 position_source
 ]
 
 export function parseVector(raw: RawVector): StateVector {
