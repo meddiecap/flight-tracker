@@ -35,9 +35,16 @@ export function useInterpolation() {
     const positions = ref<Map<string, InterpolatedPosition>>(new Map())
 
     let rafId: number | null = null
-    const POLL_INTERVAL_MS = 10_000
+    const POLL_INTERVAL_MS = 30_000 // must match useOpenSky
+    const TARGET_FPS = 15
+    const FRAME_MS = 1000 / TARGET_FPS
+    let lastFrameTime = 0
 
-    function tick() {
+    function tick(timestamp: number) {
+        rafId = requestAnimationFrame(tick)
+        if (timestamp - lastFrameTime < FRAME_MS) return
+        lastFrameTime = timestamp
+
         const now = Date.now()
         const next = new Map<string, InterpolatedPosition>()
 
@@ -55,7 +62,6 @@ export function useInterpolation() {
         }
 
         positions.value = next
-        rafId = requestAnimationFrame(tick)
     }
 
     function start() {

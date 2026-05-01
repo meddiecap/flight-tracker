@@ -28,20 +28,24 @@ const { positions, start: startInterp, updateFromStore } = useInterpolation()
 // Feed interpolation when the aircraft map updates after each poll
 watch(
     () => flightsStore.aircraft,
-    (aircraft) => updateFromStore(aircraft),
+    (aircraft) => {
+        updateFromStore(aircraft)
+        airportsStore.setAircraft(aircraft)
+    },
     { deep: false },
 )
 
 function onMapReady(map: LeafletMap) {
     startPolling(map)
     startInterp()
-    // Initialise airport viewport filter
-    const b = map.getBounds()
-    airportsStore.setViewBounds(b.getSouth(), b.getNorth(), b.getWest(), b.getEast())
-    map.on("moveend", () => {
-        const nb = map.getBounds()
-        airportsStore.setViewBounds(nb.getSouth(), nb.getNorth(), nb.getWest(), nb.getEast())
-    })
+    const syncBounds = () => {
+        const b = map.getBounds()
+        airportsStore.setViewBounds(b.getSouth(), b.getNorth(), b.getWest(), b.getEast())
+        airportsStore.setZoom(map.getZoom())
+    }
+    syncBounds()
+    map.on("moveend", syncBounds)
+    map.on("zoomend", syncBounds)
 }
 
 function onMarkerClick(icao24: string) {
@@ -64,7 +68,7 @@ const interpolatedList = computed(() => Array.from(positions.value.values()))
 
             <AirportMarker v-for="ap in airportsStore.visibleAirports" :key="ap.icao" :icao="ap.icao" :iata="ap.iata"
                 :name="ap.name" :lat="ap.lat" :lng="ap.lng"
-                :nearby-count="airportsStore.nearbyCount(ap, flightsStore.aircraft)" />
+                :nearby-count="airportsStore.nearbyCountMap.get(ap.icao) ?? 0" />
         </LMap>
 
         <StatsBar />

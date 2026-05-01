@@ -40,10 +40,18 @@ export const useAirportsStore = defineStore("airports", () => {
         lomax: number
     } | null>(null)
 
+    const currentZoom = ref(0)
+
+    // Aircraft map — updated after each poll so nearbyCountMap stays in sync
+    const aircraftRef = ref<Map<string, { latitude: number | null; longitude: number | null }>>(new Map())
+
+    // Only show airports when zoomed in enough to make them useful
+    const AIRPORT_MIN_ZOOM = 7
+
     // Airports visible in current viewport (with small padding so markers near edges show)
     const visibleAirports = computed<Airport[]>(() => {
         const b = viewBounds.value
-        if (!b) return []
+        if (!b || currentZoom.value < AIRPORT_MIN_ZOOM) return []
         const pad = 1
         return ALL_AIRPORTS.filter(
             (a) =>
@@ -52,6 +60,22 @@ export const useAirportsStore = defineStore("airports", () => {
                 a.lng >= b.lomin - pad &&
                 a.lng <= b.lomax + pad,
         )
+    })
+
+    // Pre-computed per-airport nearby count — recalculates only when aircraft or viewport changes,
+    // NOT on every rAF tick. O(airports × aircraft) runs once per poll, not 60× per second.
+    const nearbyCountMap = computed<Map<string, number>>(() => {
+        const result = new Map<string, number>()
+        const aircraft = aircraftRef.value
+        for (const ap of visibleAirports.value) {
+            let count = 0
+            for (const ac of aircraft.values()) {
+                if (ac.latitude === null || ac.longitude === null) continue
+                if (distanceKm(ap.lat, ap.lng, ac.latitude, ac.longitude) <= 150) count++
+            }
+            result.set(ap.icao, count)
+        }
+        return result
     })
 
     function setViewBounds(
@@ -63,31 +87,13 @@ export const useAirportsStore = defineStore("airports", () => {
         viewBounds.value = { lamin, lamax, lomin, lomax }
     }
 
-    /** Count aircraft within radiusKm of a given airport */
-    function nearbyCount(
-        airport: Airport,
-        aircraft: Map<
-            string,
-            { latitude: number | null; longitude: number | null }
-        >,
-        radiusKm = 150,
-    ): number {
-        let count = 0
-        for (const ac of aircraft.values()) {
-            if (ac.latitude === null || ac.longitude === null) continue
-            if (
-                distanceKm(
-                    airport.lat,
-                    airport.lng,
-                    ac.latitude,
-                    ac.longitude,
-                ) <= radiusKm
-            ) {
-                count++
-            }
-        }
-        return count
+    function setZoom(zoom: number) {
+        currentZoom.value = zoom
     }
 
-    return { visibleAirports, setViewBounds, nearbyCount }
+    function setAircraft(aircraft: Map<string, { latitude: number | null; longitude: number | null }>) {
+        aircraftRef.value = aircraft
+    }
+
+    return { visibleAirports, nearbyCountMap, setViewBounds, setZoom, setAircraft }
 })
