@@ -2,8 +2,8 @@ import { defineStore } from "pinia"
 import { ref } from "vue"
 
 /**
- * Raw state vector as returned by the OpenSky REST API.
- * https://openskynetwork.github.io/opensky-api/rest.html#response
+ * Normalised aircraft state — altitude/geoAltitude in metres, velocity in m/s, verticalRate in m/s.
+ * Sourced from the OpenSky Network REST API (https://opensky-network.org/api/states/all).
  */
 export interface StateVector {
     icao24: string
@@ -13,37 +13,43 @@ export interface StateVector {
     lastContact: number
     longitude: number | null
     latitude: number | null
-    baroAltitude: number | null
+    baroAltitude: number | null // metres
     onGround: boolean
-    velocity: number | null
-    trueTrack: number | null
-    verticalRate: number | null
+    velocity: number | null // m/s
+    trueTrack: number | null // degrees
+    verticalRate: number | null // m/s
     sensors: number[] | null
-    geoAltitude: number | null
+    geoAltitude: number | null // metres
     squawk: string | null
     spi: boolean
     positionSource: number
+    category: string | null
+    registration: string | null
+    aircraftType: string | null
 }
 
-/** Raw tuple from the OpenSky API response */
-type RawVector = [
-    string, // 0  icao24
-    string | null, // 1  callsign
-    string, // 2  origin_country
-    number | null, // 3  time_position
-    number, // 4  last_contact
-    number | null, // 5  longitude
-    number | null, // 6  latitude
-    number | null, // 7  baro_altitude
-    boolean, // 8  on_ground
-    number | null, // 9  velocity
-    number | null, // 10 true_track
-    number | null, // 11 vertical_rate
+/**
+ * Raw positional array (state vector) as returned by the OpenSky REST API.
+ * https://openskynetwork.github.io/opensky-api/rest.html#response
+ */
+export type RawVector = [
+    string,          // 0  icao24
+    string | null,   // 1  callsign
+    string,          // 2  origin_country
+    number | null,   // 3  time_position
+    number,          // 4  last_contact
+    number | null,   // 5  longitude
+    number | null,   // 6  latitude
+    number | null,   // 7  baro_altitude  (metres)
+    boolean,         // 8  on_ground
+    number | null,   // 9  velocity       (m/s)
+    number | null,   // 10 true_track     (degrees)
+    number | null,   // 11 vertical_rate  (m/s)
     number[] | null, // 12 sensors
-    number | null, // 13 geo_altitude
-    string | null, // 14 squawk
-    boolean, // 15 spi
-    number, // 16 position_source
+    number | null,   // 13 geo_altitude   (metres)
+    string | null,   // 14 squawk
+    boolean,         // 15 spi
+    number,          // 16 position_source
 ]
 
 export function parseVector(raw: RawVector): StateVector {
@@ -65,6 +71,9 @@ export function parseVector(raw: RawVector): StateVector {
         squawk: raw[14],
         spi: raw[15],
         positionSource: raw[16],
+        category: null,
+        registration: null,
+        aircraftType: null,
     }
 }
 

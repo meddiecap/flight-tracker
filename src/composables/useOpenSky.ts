@@ -1,12 +1,16 @@
 import { ref, onUnmounted } from "vue"
 import type { Map as LeafletMap } from "leaflet"
-import { useFlightsStore } from "../stores/flights"
-import { parseVector } from "../stores/flights"
+import { useFlightsStore, parseVector } from "../stores/flights"
+import type { RawVector } from "../stores/flights"
 
 const POLL_INTERVAL_MS = 10_000
-const BASE_URL = "https://opensky-network.org/api/states/all"
 
-/** Minimum viewport change (degrees) before a re-fetch is triggered on pan/zoom */
+// Routed through the Vite dev-server proxy (/api/opensky → https://opensky-network.org).
+// The proxy rewrites the path, so the actual request that leaves the server is:
+//   GET https://opensky-network.org/api/states/all?lamin=…
+const STATES_URL = "/api/opensky/api/states/all"
+
+/** Minimum viewport change (degrees) before triggering an early re-fetch */
 const BBOX_CHANGE_THRESHOLD = 0.5
 
 interface BBox {
@@ -57,7 +61,7 @@ export function useOpenSky() {
         })
 
         try {
-            const res = await fetch(`${BASE_URL}?${params.toString()}`)
+            const res = await fetch(`${STATES_URL}?${params.toString()}`)
 
             if (res.status === 429) {
                 const retryAfter = parseInt(
@@ -75,14 +79,14 @@ export function useOpenSky() {
                 store.setError(
                     `OpenSky API error: ${res.status} ${res.statusText}`,
                 )
-                backoffMs = Math.min(backoffMs * 2, 120_000) // exponential backoff, cap 2 min
+                backoffMs = Math.min(backoffMs * 2, 120_000)
                 scheduleNext()
                 return
             }
 
             const json = (await res.json()) as {
                 time: number
-                states: unknown[] | null
+                states: RawVector[] | null
             }
 
             store.clearRateLimit()
@@ -90,10 +94,7 @@ export function useOpenSky() {
             backoffMs = POLL_INTERVAL_MS
 
             if (json.states) {
-                const vectors = (
-                    json.states as Parameters<typeof parseVector>[0][]
-                ).map((raw) => parseVector(raw))
-                store.updateAircraft(vectors)
+                store.updateAircraft(json.states.map(parseVector))
             } else {
                 store.updateAircraft([])
             }
@@ -119,12 +120,10 @@ export function useOpenSky() {
         fetchStates(bbox)
     }
 
-    /** Call this when map pans or zooms to check if a re-fetch is needed. */
     function onMapMoved() {
         if (!mapInstance) return
         const bbox = bboxFromMap(mapInstance)
         if (bboxChanged(lastBBox, bbox)) {
-            // Cancel scheduled poll, fetch immediately with new bbox
             if (timerId !== null) clearTimeout(timerId)
             lastBBox = bbox
             fetchStates(bbox)
