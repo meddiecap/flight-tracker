@@ -2,8 +2,7 @@
 
 A live flight tracker built with Vue 3, TypeScript, and Leaflet. Streams real aircraft positions from the [OpenSky Network](https://opensky-network.org/) and renders them on a full-screen dark map with smooth interpolation.
 
-**[Live demo →](https://your-username.github.io/flight-tracker/)**  
-*(Replace with your actual GitHub Pages URL after the first deploy)*
+**[Live demo →](https://meddiecap.github.io/flight-tracker/)**  
 
 ![Screenshot](docs/screenshot.png)
 
@@ -24,16 +23,16 @@ A live flight tracker built with Vue 3, TypeScript, and Leaflet. Streams real ai
 
 ## Tech stack
 
-| Layer | Library |
-|---|---|
-| Framework | Vue 3 + `<script setup>` + TypeScript strict |
-| State | Pinia |
-| Map | Leaflet (imperative markers, no vue-leaflet for aircraft/airports) |
-| Styling | Tailwind CSS v4 |
-| Build | Vite + `@vitejs/plugin-vue` |
-| Package manager | Bun |
-| Deploy | GitHub Pages via GitHub Actions |
-| CORS proxy | Cloudflare Worker (free tier) |
+| Layer           | Library                                                            |
+| --------------- | ------------------------------------------------------------------ |
+| Framework       | Vue 3 + `<script setup>` + TypeScript strict                       |
+| State           | Pinia                                                              |
+| Map             | Leaflet (imperative markers, no vue-leaflet for aircraft/airports) |
+| Styling         | Tailwind CSS v4                                                    |
+| Build           | Vite + `@vitejs/plugin-vue`                                        |
+| Package manager | Bun                                                                |
+| Deploy          | GitHub Pages via GitHub Actions                                    |
+| CORS proxy      | Cloudflare Worker (free tier)                                      |
 
 ---
 
@@ -79,11 +78,11 @@ This deploys to `https://opensky-proxy.<your-subdomain>.workers.dev` on the free
 
 In your repo go to **Settings → Secrets and variables → Actions** and add:
 
-| Secret | Value |
-|---|---|
-| `VITE_OPENSKY_PROXY_URL` | Your Worker URL, e.g. `https://opensky-proxy.xxx.workers.dev` |
-| `VITE_OPENSKY_CLIENT_ID` | Your OpenSky client ID |
-| `VITE_OPENSKY_CLIENT_SECRET` | Your OpenSky client secret |
+| Secret                       | Value                                                         |
+| ---------------------------- | ------------------------------------------------------------- |
+| `VITE_OPENSKY_PROXY_URL`     | Your Worker URL, e.g. `https://opensky-proxy.xxx.workers.dev` |
+| `VITE_OPENSKY_CLIENT_ID`     | Your OpenSky client ID                                        |
+| `VITE_OPENSKY_CLIENT_SECRET` | Your OpenSky client secret                                    |
 
 ### 3. Enable GitHub Pages
 
@@ -116,4 +115,4 @@ worker/
 - **Aircraft positions**: [OpenSky Network](https://opensky-network.org/) REST API — [terms of use](https://opensky-network.org/about/terms-of-use)
 - **Airport data**: [OurAirports](https://ourairports.com/data/) — filtered to medium + large airports, public domain
 - **Map tiles**: [CartoDB Dark Matter](https://carto.com/basemaps/) — © OpenStreetMap contributors, © CARTO
-.
+  .
