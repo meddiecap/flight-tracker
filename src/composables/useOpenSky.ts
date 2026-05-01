@@ -3,12 +3,52 @@ import type { Map as LeafletMap } from "leaflet"
 import { useFlightsStore, parseVector } from "../stores/flights"
 import type { RawVector } from "../stores/flights"
 
-const POLL_INTERVAL_MS = 10_000
+const POLL_INTERVAL_MS = 30_000
 
 // Routed through the Vite dev-server proxy (/api/opensky → https://opensky-network.org).
-// The proxy rewrites the path, so the actual request that leaves the server is:
-//   GET https://opensky-network.org/api/states/all?lamin=…
 const STATES_URL = "/api/opensky/api/states/all"
+
+// OAuth2 token endpoint, proxied through Vite to avoid CORS.
+const TOKEN_URL =
+    "/api/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token"
+
+// --- Module-level token cache (one token shared across all composable instances) ---
+let cachedToken: string | null = null
+let tokenExpiresAt = 0 // Unix ms
+const TOKEN_REFRESH_MARGIN_MS = 60_000
+
+async function getToken(): Promise<string | null> {
+    const clientId = import.meta.env.VITE_OPENSKY_CLIENT_ID as string | undefined
+    const clientSecret = import.meta.env.VITE_OPENSKY_CLIENT_SECRET as string | undefined
+
+    if (!clientId || !clientSecret) return null // anonymous fallback
+
+    if (cachedToken && Date.now() < tokenExpiresAt - TOKEN_REFRESH_MARGIN_MS) {
+        return cachedToken
+    }
+
+    const body = new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+    })
+
+    const res = await fetch(TOKEN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+    })
+
+    if (!res.ok) {
+        console.warn("[OpenSky] Token fetch failed:", res.status, res.statusText)
+        return null
+    }
+
+    const data = (await res.json()) as { access_token: string; expires_in: number }
+    cachedToken = data.access_token
+    tokenExpiresAt = Date.now() + data.expires_in * 1000
+    return cachedToken
+}
 
 /** Minimum viewport change (degrees) before triggering an early re-fetch */
 const BBOX_CHANGE_THRESHOLD = 0.5
@@ -61,7 +101,11 @@ export function useOpenSky() {
         })
 
         try {
-            const res = await fetch(`${STATES_URL}?${params.toString()}`)
+            const token = await getToken()
+            const headers: Record<string, string> = {}
+            if (token) headers["Authorization"] = `Bearer ${token}`
+
+            const res = await fetch(`${STATES_URL}?${params.toString()}`, { headers })
 
             if (res.status === 429) {
                 const retryAfter = parseInt(
