@@ -62,8 +62,8 @@ const interpolatedList = computed(() => Array.from(positions.value.values()))
                 :lng="pos.lng" :true-track="pos.trueTrack" :on-ground="pos.onGround"
                 :callsign="flightsStore.aircraft.get(pos.icao24)?.callsign ?? null" @click="onMarkerClick" />
 
-            <AirportMarker v-for="ap in airportsStore.visibleAirports" :key="ap.icao" :icao="ap.icao"
-                :iata="ap.iata" :name="ap.name" :lat="ap.lat" :lng="ap.lng"
+            <AirportMarker v-for="ap in airportsStore.visibleAirports" :key="ap.icao" :icao="ap.icao" :iata="ap.iata"
+                :name="ap.name" :lat="ap.lat" :lng="ap.lng"
                 :nearby-count="airportsStore.nearbyCount(ap, flightsStore.aircraft)" />
         </LMap>
 

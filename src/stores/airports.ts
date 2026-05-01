@@ -14,7 +14,12 @@ export interface Airport {
 const ALL_AIRPORTS = airportsRaw as Airport[]
 
 /** Haversine distance in km between two lat/lng points */
-function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+function distanceKm(
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number,
+): number {
     const R = 6371
     const dLat = ((lat2 - lat1) * Math.PI) / 180
     const dLng = ((lng2 - lng1) * Math.PI) / 180
@@ -28,7 +33,12 @@ function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): num
 
 export const useAirportsStore = defineStore("airports", () => {
     // Viewport bounding box — updated by MapView on move/zoom
-    const viewBounds = ref<{ lamin: number; lamax: number; lomin: number; lomax: number } | null>(null)
+    const viewBounds = ref<{
+        lamin: number
+        lamax: number
+        lomin: number
+        lomax: number
+    } | null>(null)
 
     // Airports visible in current viewport (with small padding so markers near edges show)
     const visibleAirports = computed<Airport[]>(() => {
@@ -44,20 +54,35 @@ export const useAirportsStore = defineStore("airports", () => {
         )
     })
 
-    function setViewBounds(lamin: number, lamax: number, lomin: number, lomax: number) {
+    function setViewBounds(
+        lamin: number,
+        lamax: number,
+        lomin: number,
+        lomax: number,
+    ) {
         viewBounds.value = { lamin, lamax, lomin, lomax }
     }
 
     /** Count aircraft within radiusKm of a given airport */
     function nearbyCount(
         airport: Airport,
-        aircraft: Map<string, { latitude: number | null; longitude: number | null }>,
+        aircraft: Map<
+            string,
+            { latitude: number | null; longitude: number | null }
+        >,
         radiusKm = 150,
     ): number {
         let count = 0
         for (const ac of aircraft.values()) {
             if (ac.latitude === null || ac.longitude === null) continue
-            if (distanceKm(airport.lat, airport.lng, ac.latitude, ac.longitude) <= radiusKm) {
+            if (
+                distanceKm(
+                    airport.lat,
+                    airport.lng,
+                    ac.latitude,
+                    ac.longitude,
+                ) <= radiusKm
+            ) {
                 count++
             }
         }
