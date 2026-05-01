@@ -1,80 +1,19 @@
 import { ref, onUnmounted } from "vue"
 import type { Map as LeafletMap } from "leaflet"
-import { useFlightsStore, parseVector } from "../stores/flights"
-import type { RawVector } from "../stores/flights"
+import { useFlightsStore, parseAdsbFiAircraft } from "../stores/flights"
+import type { AdsbFiAircraft } from "../stores/flights"
 
 const POLL_INTERVAL_MS = 30_000
 
-// In production, VITE_OPENSKY_PROXY_URL points to the Vercel deployment
-// (e.g. https://flight-tracker-proxy.vercel.app).
-// In dev, fall back to the Vite dev-server proxy path.
+// In production, VITE_OPENSKY_PROXY_URL points to the Vercel deployment URL.
+// In dev, the Vite dev server proxies /api/adsb-fi → https://opendata.adsb.fi/api.
 const PROXY_BASE =
     (import.meta.env.VITE_OPENSKY_PROXY_URL as string | undefined)?.replace(
         /\/$/,
         "",
     ) ?? ""
-const STATES_URL = PROXY_BASE
-    ? `${PROXY_BASE}/api/states`
-    : "/api/opensky/api/states/all"
 
-// OAuth2 token endpoint.
-// In dev: proxied via Vite to avoid CORS on localhost.
-// In production: routed through the Vercel function which adds CORS headers.
-const TOKEN_URL = PROXY_BASE
-    ? `${PROXY_BASE}/api/token`
-    : "/api/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token"
-
-// --- Module-level token cache (one token shared across all composable instances) ---
-let cachedToken: string | null = null
-let tokenExpiresAt = 0 // Unix ms
-const TOKEN_REFRESH_MARGIN_MS = 60_000
-
-async function getToken(): Promise<string | null> {
-    const clientId = import.meta.env.VITE_OPENSKY_CLIENT_ID as
-        | string
-        | undefined
-    const clientSecret = import.meta.env.VITE_OPENSKY_CLIENT_SECRET as
-        | string
-        | undefined
-
-    if (!clientId || !clientSecret) return null // anonymous fallback
-
-    if (cachedToken && Date.now() < tokenExpiresAt - TOKEN_REFRESH_MARGIN_MS) {
-        return cachedToken
-    }
-
-    const body = new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: clientId,
-        client_secret: clientSecret,
-    })
-
-    const res = await fetch(TOKEN_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-    })
-
-    if (!res.ok) {
-        console.warn(
-            "[OpenSky] Token fetch failed:",
-            res.status,
-            res.statusText,
-        )
-        return null
-    }
-
-    const data = (await res.json()) as {
-        access_token: string
-        expires_in: number
-    }
-    cachedToken = data.access_token
-    tokenExpiresAt = Date.now() + data.expires_in * 1000
-    return cachedToken
-}
-
-/** Minimum viewport change (degrees) before triggering an early re-fetch */
-const BBOX_CHANGE_THRESHOLD = 0.5
+const ADSB_FI_BASE = PROXY_BASE ? `${PROXY_BASE}/api/aircraft` : "/api/adsb-fi"
 
 interface BBox {
     lamin: number
@@ -92,6 +31,28 @@ function bboxFromMap(map: LeafletMap): BBox {
         lomax: b.getEast(),
     }
 }
+
+/** Convert a map bounding box to a lat/lon/dist query for the adsb.fi v3 API. */
+function bboxToLatLonDist(bbox: BBox): {
+    lat: number
+    lon: number
+    distNm: number
+} {
+    const lat = (bbox.lamin + bbox.lamax) / 2
+    const lon = (bbox.lomin + bbox.lomax) / 2
+    // Half-diagonal of bbox in nautical miles (1° lat ≈ 60 NM)
+    const dLatNm = ((bbox.lamax - bbox.lamin) / 2) * 60
+    const dLonNm =
+        ((bbox.lomax - bbox.lomin) / 2) * 60 * Math.cos((lat * Math.PI) / 180)
+    const distNm = Math.min(
+        Math.ceil(Math.sqrt(dLatNm ** 2 + dLonNm ** 2)),
+        250,
+    )
+    return { lat, lon, distNm }
+}
+
+/** Minimum viewport change (degrees) before triggering an early re-fetch */
+const BBOX_CHANGE_THRESHOLD = 0.5
 
 function bboxChanged(prev: BBox | null, next: BBox): boolean {
     if (!prev) return true
@@ -116,28 +77,19 @@ export function useOpenSky() {
         if (isFetching.value) return
         isFetching.value = true
 
-        const params = new URLSearchParams({
-            lamin: String(bbox.lamin),
-            lamax: String(bbox.lamax),
-            lomin: String(bbox.lomin),
-            lomax: String(bbox.lomax),
-        })
+        const { lat, lon, distNm } = bboxToLatLonDist(bbox)
+        // In dev: /api/adsb-fi/v3/lat/.../lon/.../dist/... (Vite proxy)
+        // In prod: /api/aircraft?lat=...&lon=...&dist=... (Vercel function)
+        const url = PROXY_BASE
+            ? `${ADSB_FI_BASE}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&dist=${distNm}`
+            : `${ADSB_FI_BASE}/v3/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
 
         try {
-            const token = await getToken()
-            const headers: Record<string, string> = {}
-            if (token) headers["Authorization"] = `Bearer ${token}`
-
-            const res = await fetch(`${STATES_URL}?${params.toString()}`, {
-                headers,
-            })
+            const res = await fetch(url)
 
             if (res.status === 429) {
-                const retryAfter = parseInt(
-                    res.headers.get("Retry-After") ?? "60",
-                    10,
-                )
-                const retryMs = retryAfter * 1000
+                // adsb.fi doesn't send Retry-After, use fixed backoff
+                const retryMs = 60_000
                 store.setRateLimit(retryMs)
                 backoffMs = retryMs
                 scheduleNext()
@@ -146,27 +98,24 @@ export function useOpenSky() {
 
             if (!res.ok) {
                 store.setError(
-                    `OpenSky API error: ${res.status} ${res.statusText}`,
+                    `adsb.fi API error: ${res.status} ${res.statusText}`,
                 )
                 backoffMs = Math.min(backoffMs * 2, 120_000)
                 scheduleNext()
                 return
             }
 
-            const json = (await res.json()) as {
-                time: number
-                states: RawVector[] | null
-            }
+            const json = (await res.json()) as { ac?: AdsbFiAircraft[] }
 
             store.clearRateLimit()
             store.setError(null)
             backoffMs = POLL_INTERVAL_MS
 
-            if (json.states) {
-                store.updateAircraft(json.states.map(parseVector))
-            } else {
-                store.updateAircraft([])
-            }
+            store.updateAircraft(
+                (json.ac ?? [])
+                    .filter((ac) => ac.lat != null && ac.lon != null)
+                    .map(parseAdsbFiAircraft),
+            )
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Network error"
             store.setError(msg)
