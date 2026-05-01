@@ -102,7 +102,7 @@ function fmtCo2(kghr: number): string {
                     <dt class="text-xs text-slate-400 uppercase tracking-wide flex items-center gap-1">
                         CO₂ estimate
                         <span class="cursor-help text-slate-500"
-                            title="Rough estimate only — not scientifically accurate.">ⓘ</span>
+                            title="Rough estimate only — not scientifically accurate.&#10;&#10;Formula: CO₂ (kg/h) = speed (km/h) × base rate × (speed / 250)&#10;Base rate: 8.5 kg/km narrow-body · 15 kg/km wide-body&#10;Wide-body detected via OpenSky category field or ICAO24 prefix heuristic.&#10;On-ground aircraft return 0.">ⓘ</span>
                     </dt>
                     <dd class="text-slate-100 mt-0.5">{{ fmtCo2(estimateCo2(flight)) }}</dd>
                 </div>

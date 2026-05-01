@@ -93,9 +93,16 @@ function fmtCo2(kghr: number): string {
             <span class="text-slate-400 text-xs">CO₂ est.</span>
             <!-- Hover disclaimer -->
             <div
-                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 rounded-lg bg-slate-800 text-slate-300 text-xs px-3 py-2 shadow-lg ring-1 ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                Rough estimate only — not scientifically accurate. Based on a simplified
-                velocity-scaled emission model.
+                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 rounded-lg bg-slate-800 text-slate-300 text-xs px-3 py-2 shadow-lg ring-1 ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                <p class="font-semibold text-slate-100 mb-1">CO₂ estimate — how it's calculated</p>
+                <p>CO₂ (kg/h) = speed (km/h) &times; base rate &times; (speed / 250)</p>
+                <ul class="mt-1 space-y-0.5 text-slate-400">
+                    <li>Narrow-body: 8.5 kg/km base rate</li>
+                    <li>Wide-body: 15 kg/km base rate</li>
+                    <li>Wide-body detected via OpenSky category or ICAO24 prefix</li>
+                    <li>On-ground aircraft: 0</li>
+                </ul>
+                <p class="mt-1.5 text-slate-500">Not scientifically accurate — for illustration only.</p>
                 <span
                     class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
             </div>
