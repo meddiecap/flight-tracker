@@ -1,9 +1,13 @@
 /**
  * Manages airport markers directly via the Leaflet API — same pattern as useAircraftLayer.
  * Avoids vue-leaflet async addLayer() promises that crash on rapid viewport changes.
+ *
+ * Tooltip strategy: one shared standalone L.Tooltip, manually shown/hidden via DOM
+ * mouseenter/mouseleave. This prevents Leaflet's internal tooltip state machine from
+ * drifting when markers are rapidly added/removed (pan, zoom, polls).
  */
 import L from "leaflet"
-import type { Map as LeafletMap, Marker } from "leaflet"
+import type { Map as LeafletMap, Marker, Tooltip } from "leaflet"
 import type { Airport } from "../stores/airports"
 
 function buildIcon(hasFlights: boolean): L.DivIcon {
@@ -41,7 +45,12 @@ function buildTooltip(ap: Airport, nearbyCount: number): string {
 export function useAirportLayer() {
     const markers = new Map<string, Marker>()
     const nearbyCounts = new Map<string, number>()
+    // Latest tooltip HTML per airport — updated without reopening the tooltip
+    const tooltipHtml = new Map<string, string>()
     let leafletMap: LeafletMap | null = null
+    // Singleton tooltip: only one airport tooltip can ever be visible at a time
+    let sharedTooltip: Tooltip | null = null
+    let hoveredIcao: string | null = null
 
     function mount(map: LeafletMap) {
         leafletMap = map
@@ -50,10 +59,31 @@ export function useAirportLayer() {
         if (!map.getPane("airportPane")) {
             const pane = map.createPane("airportPane")
             pane.style.zIndex = "500"
-            // Match default markerPane behaviour: pane itself is not a hit-target;
-            // only interactive marker icons inside it are.
             pane.style.pointerEvents = "none"
         }
+        sharedTooltip = L.tooltip({
+            direction: "top",
+            offset: [0, -8],
+            opacity: 0.95,
+            className: "leaflet-airport-tooltip",
+        })
+    }
+
+    function attachHoverHandlers(icao: string, marker: Marker) {
+        const el = marker.getElement()
+        if (!el) return
+        el.addEventListener("mouseenter", () => {
+            if (!leafletMap || !sharedTooltip) return
+            hoveredIcao = icao
+            const html = tooltipHtml.get(icao) ?? ""
+            sharedTooltip.setContent(html)
+            sharedTooltip.setLatLng(marker.getLatLng())
+            sharedTooltip.addTo(leafletMap)
+        })
+        el.addEventListener("mouseleave", () => {
+            hoveredIcao = null
+            sharedTooltip?.remove()
+        })
     }
 
     /** Called when the visible airports set changes (viewport/zoom change). */
@@ -69,11 +99,9 @@ export function useAirportLayer() {
             const existing = markers.get(ap.icao)
 
             if (existing) {
-                // Update colour and tooltip only when nearby count changes.
+                // Update colour and tooltip content only when nearby count changes.
                 // Mutate SVG DOM directly — avoids marker.setIcon() which calls
-                // Leaflet's _initIcon() (DOM detach → reattach). That detach fires
-                // a synthetic mouseout that never has a matching mouseover, leaving
-                // tooltip open on the wrong marker until the user moves away.
+                // Leaflet's _initIcon() (DOM detach → reattach).
                 if (prevCount !== count) {
                     const el = existing.getElement()
                     const color = count > 0 ? "#fbbf24" : "#94a3b8"
@@ -84,22 +112,21 @@ export function useAirportLayer() {
                         circle.setAttribute("fill", color)
                     }
                     if (text) text.setAttribute("fill", color)
-                    existing.setTooltipContent(buildTooltip(ap, count))
+                    const html = buildTooltip(ap, count)
+                    tooltipHtml.set(ap.icao, html)
+                    // If this airport is currently being hovered, update the live tooltip
+                    if (hoveredIcao === ap.icao) sharedTooltip?.setContent(html)
                     nearbyCounts.set(ap.icao, count)
                 }
             } else {
-                // New marker
+                // New marker — no bindTooltip; tooltip is managed via the shared singleton
+                const html = buildTooltip(ap, count)
+                tooltipHtml.set(ap.icao, html)
                 const marker = L.marker([ap.lat, ap.lng], {
                     icon: buildIcon(count > 0),
                     keyboard: false,
                     alt: `${ap.name} (${ap.iata || ap.icao})`,
                     pane: "airportPane",
-                })
-                marker.bindTooltip(buildTooltip(ap, count), {
-                    direction: "top",
-                    offset: [0, -8],
-                    opacity: 0.95,
-                    className: "leaflet-airport-tooltip",
                 })
                 marker.addTo(leafletMap)
                 const el = marker.getElement()
@@ -110,24 +137,37 @@ export function useAirportLayer() {
                     )
                     el.setAttribute("role", "img")
                 }
+                attachHoverHandlers(ap.icao, marker)
                 markers.set(ap.icao, marker)
                 nearbyCounts.set(ap.icao, count)
             }
         }
 
-        // Remove markers that left the viewport
+        // Remove markers that left the viewport. Collect first to avoid mutating
+        // the Map while iterating it.
+        const toRemove: string[] = []
         for (const icao of markers.keys()) {
-            if (!incoming.has(icao)) {
-                markers.get(icao)!.remove()
-                markers.delete(icao)
-                nearbyCounts.delete(icao)
+            if (!incoming.has(icao)) toRemove.push(icao)
+        }
+        for (const icao of toRemove) {
+            // Close the shared tooltip if this was the hovered airport
+            if (hoveredIcao === icao) {
+                sharedTooltip?.remove()
+                hoveredIcao = null
             }
+            markers.get(icao)!.remove()
+            markers.delete(icao)
+            nearbyCounts.delete(icao)
+            tooltipHtml.delete(icao)
         }
     }
 
     function unmount() {
+        sharedTooltip?.remove()
         for (const marker of markers.values()) marker.remove()
         markers.clear()
+        nearbyCounts.clear()
+        tooltipHtml.clear()
         nearbyCounts.clear()
     }
 
