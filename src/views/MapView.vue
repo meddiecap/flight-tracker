@@ -7,6 +7,7 @@ import { useOpenSky } from "../composables/useOpenSky"
 import { useInterpolation } from "../composables/useInterpolation"
 import { useFlightsStore } from "../stores/flights"
 import AircraftMarker from "../components/AircraftMarker.vue"
+import FlightPanel from "../components/FlightPanel.vue"
 
 const zoom = ref(5)
 const center = ref<[number, number]>([51.5, 10.0]) // centred over Europe
@@ -40,7 +41,7 @@ const interpolatedList = computed(() => Array.from(positions.value.values()))
 </script>
 
 <template>
-    <div class="w-full h-dvh">
+    <div class="w-full h-dvh relative">
         <LMap :zoom="zoom" :center="center" :use-global-leaflet="false" class="w-full h-full" @ready="onMapReady"
             @click="flightsStore.selectFlight(null)">
             <LTileLayer :url="tileUrl" :attribution="tileAttribution" layer-type="base" name="CartoDB Dark"
@@ -50,5 +51,7 @@ const interpolatedList = computed(() => Array.from(positions.value.values()))
                 :lng="pos.lng" :true-track="pos.trueTrack" :on-ground="pos.onGround"
                 :callsign="flightsStore.aircraft.get(pos.icao24)?.callsign ?? null" @click="onMarkerClick" />
         </LMap>
+
+        <FlightPanel />
     </div>
 </template>
