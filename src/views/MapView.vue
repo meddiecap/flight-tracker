@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue"
+import { ref, watch } from "vue"
 import { LMap, LTileLayer } from "@vue-leaflet/vue-leaflet"
 import type { Map as LeafletMap } from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -52,7 +52,7 @@ function onMarkerClick(icao24: string) {
     flightsStore.selectFlight(icao24)
 }
 
-const interpolatedList = computed(() => Array.from(positions.value.values()))
+const interpolatedList = positions
 </script>
 
 <template>

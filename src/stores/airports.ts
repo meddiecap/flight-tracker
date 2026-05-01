@@ -43,7 +43,9 @@ export const useAirportsStore = defineStore("airports", () => {
     const currentZoom = ref(0)
 
     // Aircraft map — updated after each poll so nearbyCountMap stays in sync
-    const aircraftRef = ref<Map<string, { latitude: number | null; longitude: number | null }>>(new Map())
+    const aircraftRef = ref<
+        Map<string, { latitude: number | null; longitude: number | null }>
+    >(new Map())
 
     // Only show airports when zoomed in enough to make them useful
     const AIRPORT_MIN_ZOOM = 7
@@ -71,7 +73,10 @@ export const useAirportsStore = defineStore("airports", () => {
             let count = 0
             for (const ac of aircraft.values()) {
                 if (ac.latitude === null || ac.longitude === null) continue
-                if (distanceKm(ap.lat, ap.lng, ac.latitude, ac.longitude) <= 150) count++
+                if (
+                    distanceKm(ap.lat, ap.lng, ac.latitude, ac.longitude) <= 150
+                )
+                    count++
             }
             result.set(ap.icao, count)
         }
@@ -91,9 +96,20 @@ export const useAirportsStore = defineStore("airports", () => {
         currentZoom.value = zoom
     }
 
-    function setAircraft(aircraft: Map<string, { latitude: number | null; longitude: number | null }>) {
+    function setAircraft(
+        aircraft: Map<
+            string,
+            { latitude: number | null; longitude: number | null }
+        >,
+    ) {
         aircraftRef.value = aircraft
     }
 
-    return { visibleAirports, nearbyCountMap, setViewBounds, setZoom, setAircraft }
+    return {
+        visibleAirports,
+        nearbyCountMap,
+        setViewBounds,
+        setZoom,
+        setAircraft,
+    }
 })

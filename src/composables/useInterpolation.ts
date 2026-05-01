@@ -1,4 +1,4 @@
-import { ref, onUnmounted } from "vue"
+import { shallowRef, reactive, onUnmounted } from "vue"
 import type { StateVector } from "../stores/flights"
 
 export interface InterpolatedPosition {
@@ -17,25 +17,24 @@ interface Snapshot {
     timestamp: number
 }
 
-/**
- * Linearly interpolates between two snapshots.
- * t = 0 → prev position, t = 1 → next position.
- */
 function lerpAngle(a: number, b: number, t: number): number {
-    // Shortest-path interpolation around the 0/360 boundary
-    let diff = ((b - a + 540) % 360) - 180
+    const diff = ((b - a + 540) % 360) - 180
     return (a + diff * t + 360) % 360
 }
 
 export function useInterpolation() {
-    // Keyed by icao24: the last two known positions
     const snapshots = new Map<string, { prev: Snapshot; next: Snapshot }>()
 
-    // The reactive output: interpolated positions for all tracked aircraft
-    const positions = ref<Map<string, InterpolatedPosition>>(new Map())
+    /**
+     * Each aircraft gets its own reactive() object.
+     * The rAF tick mutates individual objects → only THAT aircraft's LMarker re-renders.
+     * The array itself only changes when aircraft are added/removed (every 30s poll).
+     */
+    const positionMap = new Map<string, InterpolatedPosition>()
+    const positions = shallowRef<InterpolatedPosition[]>([])
 
     let rafId: number | null = null
-    const POLL_INTERVAL_MS = 30_000 // must match useOpenSky
+    const POLL_INTERVAL_MS = 30_000
     const TARGET_FPS = 15
     const FRAME_MS = 1000 / TARGET_FPS
     let lastFrameTime = 0
@@ -46,22 +45,16 @@ export function useInterpolation() {
         lastFrameTime = timestamp
 
         const now = Date.now()
-        const next = new Map<string, InterpolatedPosition>()
-
         for (const [icao24, { prev, next: snap }] of snapshots) {
-            const elapsed = now - snap.timestamp
-            // t goes from 0→1 over one poll interval, clamped so we never overshoot
-            const t = Math.min(elapsed / POLL_INTERVAL_MS, 1)
-            next.set(icao24, {
-                icao24,
-                lat: prev.lat + (snap.lat - prev.lat) * t,
-                lng: prev.lng + (snap.lng - prev.lng) * t,
-                trueTrack: lerpAngle(prev.trueTrack, snap.trueTrack, t),
-                onGround: snap.onGround,
-            })
+            const pos = positionMap.get(icao24)
+            if (!pos) continue
+            const t = Math.min((now - snap.timestamp) / POLL_INTERVAL_MS, 1)
+            // Direct property mutation on reactive() object — only this marker re-renders
+            pos.lat = prev.lat + (snap.lat - prev.lat) * t
+            pos.lng = prev.lng + (snap.lng - prev.lng) * t
+            pos.trueTrack = lerpAngle(prev.trueTrack, snap.trueTrack, t)
+            pos.onGround = snap.onGround
         }
-
-        positions.value = next
     }
 
     function start() {
@@ -77,12 +70,13 @@ export function useInterpolation() {
     }
 
     /**
-     * Called after each OpenSky poll. Feeds new positions into the snapshot store.
-     * Aircraft that disappeared from the response are removed.
+     * Called after each OpenSky poll. Adds/removes aircraft from the reactive array.
+     * Individual position objects are reused across polls so LMarkers are never remounted.
      */
     function updateFromStore(aircraft: Map<string, StateVector>) {
         const now = Date.now()
         const incoming = new Set<string>()
+        let arrayChanged = false
 
         for (const [icao24, sv] of aircraft) {
             if (sv.latitude == null || sv.longitude == null) continue
@@ -98,17 +92,34 @@ export function useInterpolation() {
 
             const existing = snapshots.get(icao24)
             if (existing) {
-                // Advance: old "next" becomes "prev", new data becomes "next"
                 snapshots.set(icao24, { prev: existing.next, next: newSnap })
             } else {
-                // First sighting: both prev and next are the same point (no interpolation yet)
                 snapshots.set(icao24, { prev: newSnap, next: newSnap })
+                // New aircraft — create a reactive position object and add to array
+                const pos = reactive<InterpolatedPosition>({
+                    icao24,
+                    lat: sv.latitude,
+                    lng: sv.longitude,
+                    trueTrack: sv.trueTrack ?? 0,
+                    onGround: sv.onGround,
+                })
+                positionMap.set(icao24, pos)
+                arrayChanged = true
             }
         }
 
         // Remove aircraft no longer in view
         for (const key of snapshots.keys()) {
-            if (!incoming.has(key)) snapshots.delete(key)
+            if (!incoming.has(key)) {
+                snapshots.delete(key)
+                positionMap.delete(key)
+                arrayChanged = true
+            }
+        }
+
+        // Only rebuild the array (and trigger v-for diff) when aircraft set changes
+        if (arrayChanged) {
+            positions.value = Array.from(positionMap.values())
         }
     }
 
