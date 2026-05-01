@@ -80,6 +80,11 @@ export function useAirportLayer() {
                     className: "leaflet-airport-tooltip",
                 })
                 marker.addTo(leafletMap)
+                const el = marker.getElement()
+                if (el) {
+                    el.setAttribute("aria-label", `${ap.name} airport (${ap.iata || ap.icao})`)
+                    el.setAttribute("role", "img")
+                }
                 markers.set(ap.icao, marker)
                 nearbyCounts.set(ap.icao, count)
             }

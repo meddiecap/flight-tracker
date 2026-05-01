@@ -9,6 +9,7 @@ import { useAirportLayer } from "../composables/useAirportLayer"
 import { useFlightsStore } from "../stores/flights"
 import FlightPanel from "../components/FlightPanel.vue"
 import StatsBar from "../components/StatsBar.vue"
+import ErrorBanner from "../components/ErrorBanner.vue"
 import { useAirportsStore } from "../stores/airports"
 
 const zoom = ref(5)
@@ -73,5 +74,6 @@ onUnmounted(() => {
 
         <StatsBar />
         <FlightPanel />
+        <ErrorBanner />
     </div>
 </template>

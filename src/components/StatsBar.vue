@@ -45,10 +45,10 @@ function fmtCo2(kghr: number): string {
 
 <template>
     <div
-        class="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center rounded-xl bg-slate-900/85 backdrop-blur ring-1 ring-white/10 shadow-xl text-white overflow-hidden text-sm whitespace-nowrap">
+        class="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100%-2rem)] sm:w-auto flex flex-wrap justify-center items-center rounded-xl bg-slate-900/85 backdrop-blur ring-1 ring-white/10 shadow-xl text-white overflow-hidden text-sm">
 
         <!-- Aircraft count -->
-        <div class="flex items-center gap-1.5 px-4 py-2.5">
+        <div class="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5">
             <svg class="w-3.5 h-3.5 text-sky-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                 <path
                     d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" />
@@ -57,10 +57,10 @@ function fmtCo2(kghr: number): string {
             <span class="text-slate-400 text-xs">aircraft</span>
         </div>
 
-        <div class="w-px h-6 bg-white/10" />
+        <div class="w-px h-6 bg-white/10 hidden sm:block" />
 
         <!-- Max altitude -->
-        <div class="flex items-center gap-1.5 px-4 py-2.5">
+        <div class="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5">
             <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
@@ -69,10 +69,10 @@ function fmtCo2(kghr: number): string {
             <span class="text-slate-400 text-xs">max alt</span>
         </div>
 
-        <div class="w-px h-6 bg-white/10" />
+        <div class="w-px h-6 bg-white/10 hidden sm:block" />
 
         <!-- Max speed -->
-        <div class="flex items-center gap-1.5 px-4 py-2.5">
+        <div class="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5">
             <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -81,10 +81,10 @@ function fmtCo2(kghr: number): string {
             <span class="text-slate-400 text-xs">max speed</span>
         </div>
 
-        <div class="w-px h-6 bg-white/10" />
+        <div class="w-px h-6 bg-white/10 hidden sm:block" />
 
         <!-- CO₂ total with disclaimer tooltip -->
-        <div class="flex items-center gap-1.5 px-4 py-2.5 group relative">
+        <div class="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 group relative">
             <svg class="w-3.5 h-3.5 text-green-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                 <path
                     d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 2-13 3.5S2 16 2 16s1-11.5 15-8z" />

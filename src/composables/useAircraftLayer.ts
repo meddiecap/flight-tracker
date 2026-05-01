@@ -123,6 +123,15 @@ export function useAircraftLayer() {
                 const id = icao24
                 marker.on("click", () => onClickCb?.(id))
                 marker.addTo(leafletMap)
+                const el = marker.getElement()
+                if (el) {
+                    const label = sv.callsign
+                        ? `${sv.callsign} over ${sv.originCountry}`
+                        : `${icao24.toUpperCase()} over ${sv.originCountry}`
+                    el.setAttribute("aria-label", label)
+                    el.setAttribute("role", "button")
+                    el.setAttribute("tabindex", "0")
+                }
                 markers.set(icao24, marker)
             }
         }
