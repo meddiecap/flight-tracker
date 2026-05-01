@@ -8,7 +8,11 @@ const POLL_INTERVAL_MS = 30_000
 // In production, VITE_OPENSKY_PROXY_URL points to the Cloudflare Worker
 // (e.g. https://opensky-proxy.<subdomain>.workers.dev).
 // In dev, fall back to the Vite dev-server proxy path.
-const PROXY_BASE = (import.meta.env.VITE_OPENSKY_PROXY_URL as string | undefined)?.replace(/\/$/, "") ?? ""
+const PROXY_BASE =
+    (import.meta.env.VITE_OPENSKY_PROXY_URL as string | undefined)?.replace(
+        /\/$/,
+        "",
+    ) ?? ""
 const STATES_URL = PROXY_BASE
     ? `${PROXY_BASE}/api/states/all`
     : "/api/opensky/api/states/all"

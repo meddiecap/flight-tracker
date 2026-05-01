@@ -2,7 +2,7 @@
 
 A live flight tracker built with Vue 3, TypeScript, and Leaflet. Streams real aircraft positions from the [OpenSky Network](https://opensky-network.org/) and renders them on a full-screen dark map with smooth interpolation.
 
-**[Live demo →](https://meddiecap.github.io/flight-tracker/)**  
+**[Live demo →](https://meddiecap.github.io/flight-tracker/)**
 
 ![Screenshot](docs/screenshot.png)
 
