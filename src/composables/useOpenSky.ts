@@ -19,9 +19,9 @@ const STATES_URL = PROXY_BASE
 
 // OAuth2 token endpoint.
 // In dev: proxied via Vite to avoid CORS on localhost.
-// In production: the auth server allows cross-origin POST directly.
+// In production: routed through the Cloudflare Worker which adds CORS headers.
 const TOKEN_URL = PROXY_BASE
-    ? "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+    ? `${PROXY_BASE}/api/token`
     : "/api/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token"
 
 // --- Module-level token cache (one token shared across all composable instances) ---

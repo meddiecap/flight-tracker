@@ -1,28 +1,24 @@
 /**
  * Cloudflare Worker — OpenSky Network CORS proxy
  *
- * Forwards requests to https://opensky-network.org/api/states/all and adds
- * the correct CORS headers so the browser can call it from any origin.
+ * Proxied endpoints:
+ *   GET  /api/states/all?…  → https://opensky-network.org/api/states/all?…
+ *   POST /api/token         → https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token
  *
- * Deploy (free tier, no credit card needed):
- *   1. npx wrangler login
- *   2. npx wrangler deploy worker/opensky-proxy.js --name opensky-proxy --compatibility-date 2024-01-01
+ * Both responses get Access-Control-Allow-Origin: * so the browser can reach
+ * them from any origin (GitHub Pages, localhost, etc.).
  *
- * The worker URL will be something like:
- *   https://opensky-proxy.<your-subdomain>.workers.dev
- *
- * Set that URL as the VITE_OPENSKY_PROXY_URL secret in GitHub Actions
- * (Settings → Secrets → Actions → New repository secret).
- *
- * Auth note: the Worker forwards the Authorization header unchanged, so
- * OAuth2 bearer tokens obtained by the client still work transparently.
+ * Deploy:
+ *   bunx wrangler deploy worker/opensky-proxy.js --name opensky-proxy --compatibility-date 2024-01-01
  */
 
 const OPENSKY_BASE = "https://opensky-network.org"
+const AUTH_TOKEN_URL =
+    "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
 const CORS_HEADERS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
 }
 
@@ -33,15 +29,36 @@ export default {
             return new Response(null, { status: 204, headers: CORS_HEADERS })
         }
 
-        if (request.method !== "GET") {
-            return new Response("Method Not Allowed", { status: 405 })
-        }
-
         const url = new URL(request.url)
 
-        // Only allow the states/all endpoint — block any other path
+        // --- Token endpoint proxy ---
+        if (url.pathname === "/api/token") {
+            if (request.method !== "POST") {
+                return new Response("Method Not Allowed", { status: 405, headers: CORS_HEADERS })
+            }
+            let upstreamRes
+            try {
+                upstreamRes = await fetch(AUTH_TOKEN_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: await request.text(),
+                })
+            } catch {
+                return new Response("Bad Gateway", { status: 502, headers: CORS_HEADERS })
+            }
+            return new Response(upstreamRes.body, {
+                status: upstreamRes.status,
+                headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+            })
+        }
+
+        // --- States endpoint proxy ---
         if (!url.pathname.startsWith("/api/states/all")) {
-            return new Response("Not Found", { status: 404 })
+            return new Response("Not Found", { status: 404, headers: CORS_HEADERS })
+        }
+
+        if (request.method !== "GET") {
+            return new Response("Method Not Allowed", { status: 405, headers: CORS_HEADERS })
         }
 
         const upstream = new URL(OPENSKY_BASE)
