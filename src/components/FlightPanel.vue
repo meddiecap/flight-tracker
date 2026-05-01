@@ -74,13 +74,14 @@ function close() {
                     <dd :class="[
                         'text-slate-100',
                         flight.verticalRate !== null && flight.verticalRate > 0.5 ? 'text-green-400' :
-                        flight.verticalRate !== null && flight.verticalRate < -0.5 ? 'text-red-400' : ''
+                            flight.verticalRate !== null && flight.verticalRate < -0.5 ? 'text-red-400' : ''
                     ]">{{ fmt(flight.verticalRate, 1, "m/s") }}</dd>
                 </div>
                 <div class="col-span-2">
                     <dt class="text-xs text-slate-400 uppercase tracking-wide">Status</dt>
                     <dd class="flex items-center gap-1.5 mt-0.5">
-                        <span :class="['inline-block w-2 h-2 rounded-full', flight.onGround ? 'bg-amber-400' : 'bg-sky-400']" />
+                        <span
+                            :class="['inline-block w-2 h-2 rounded-full', flight.onGround ? 'bg-amber-400' : 'bg-sky-400']" />
                         <span class="text-slate-100">{{ flight.onGround ? "On ground" : "Airborne" }}</span>
                     </dd>
                 </div>
