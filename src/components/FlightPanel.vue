@@ -32,8 +32,7 @@ function fmtCo2(kghr: number): string {
     <Transition name="panel">
         <aside v-if="flight"
             class="fixed inset-x-0 bottom-0 z-[1000] w-full max-h-[65vh] overflow-y-auto rounded-t-xl sm:absolute sm:inset-x-auto sm:top-4 sm:right-4 sm:bottom-auto sm:w-72 sm:max-h-none sm:overflow-visible sm:rounded-xl bg-slate-900/90 backdrop-blur text-white shadow-2xl ring-1 ring-white/10"
-            role="complementary"
-            aria-label="Flight details">
+            role="complementary" aria-label="Flight details">
 
             <!-- Drag handle (mobile only) -->
             <div class="flex justify-center pt-2.5 pb-1 sm:hidden" aria-hidden="true">
@@ -127,6 +126,7 @@ function fmtCo2(kghr: number): string {
 
 /* Desktop (sm+): slide in from the right */
 @media (min-width: 640px) {
+
     .panel-enter-from,
     .panel-leave-to {
         opacity: 0;

@@ -82,7 +82,10 @@ export function useAirportLayer() {
                 marker.addTo(leafletMap)
                 const el = marker.getElement()
                 if (el) {
-                    el.setAttribute("aria-label", `${ap.name} airport (${ap.iata || ap.icao})`)
+                    el.setAttribute(
+                        "aria-label",
+                        `${ap.name} airport (${ap.iata || ap.icao})`,
+                    )
                     el.setAttribute("role", "img")
                 }
                 markers.set(ap.icao, marker)
