@@ -5,8 +5,8 @@ import type { RawVector } from "../stores/flights"
 
 const POLL_INTERVAL_MS = 30_000
 
-// In production, VITE_OPENSKY_PROXY_URL points to the Cloudflare Worker
-// (e.g. https://opensky-proxy.<subdomain>.workers.dev).
+// In production, VITE_OPENSKY_PROXY_URL points to the Vercel deployment
+// (e.g. https://flight-tracker-proxy.vercel.app).
 // In dev, fall back to the Vite dev-server proxy path.
 const PROXY_BASE =
     (import.meta.env.VITE_OPENSKY_PROXY_URL as string | undefined)?.replace(
@@ -14,12 +14,12 @@ const PROXY_BASE =
         "",
     ) ?? ""
 const STATES_URL = PROXY_BASE
-    ? `${PROXY_BASE}/api/states/all`
+    ? `${PROXY_BASE}/api/states`
     : "/api/opensky/api/states/all"
 
 // OAuth2 token endpoint.
 // In dev: proxied via Vite to avoid CORS on localhost.
-// In production: routed through the Cloudflare Worker which adds CORS headers.
+// In production: routed through the Vercel function which adds CORS headers.
 const TOKEN_URL = PROXY_BASE
     ? `${PROXY_BASE}/api/token`
     : "/api/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token"
