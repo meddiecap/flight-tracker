@@ -12,11 +12,19 @@ function buildIcon(hasFlights: boolean): L.DivIcon {
         <circle cx="11" cy="11" r="9" fill="${color}" fill-opacity="0.15" stroke="${color}" stroke-width="1.5"/>
         <text x="11" y="15" text-anchor="middle" font-size="10" font-family="monospace" fill="${color}" font-weight="bold">◆</text>
     </svg>`
-    return L.divIcon({ html: svg, className: "", iconSize: [22, 22], iconAnchor: [11, 11] })
+    return L.divIcon({
+        html: svg,
+        className: "",
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+    })
 }
 
 function buildTooltip(ap: Airport, nearbyCount: number): string {
-    const meta = [ap.iata ? `IATA: ${ap.iata}` : "", ap.icao ? `ICAO: ${ap.icao}` : ""]
+    const meta = [
+        ap.iata ? `IATA: ${ap.iata}` : "",
+        ap.icao ? `ICAO: ${ap.icao}` : "",
+    ]
         .filter(Boolean)
         .join(" · ")
     const flights =

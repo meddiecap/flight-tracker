@@ -30,7 +30,12 @@ function buildIcon(onGround: boolean): L.DivIcon {
         style="display:block;opacity:${opacity}">
         <path fill="${color}" d="M12 2 L15 10 L22 11 L15 13 L16 20 L12 18 L8 20 L9 13 L2 11 L9 10 Z"/>
     </svg>`
-    return L.divIcon({ html: svg, className: "", iconSize: [24, 24], iconAnchor: [12, 12] })
+    return L.divIcon({
+        html: svg,
+        className: "",
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+    })
 }
 
 export function useAircraftLayer() {
@@ -99,7 +104,10 @@ export function useAircraftLayer() {
             const existingMarker = markers.get(icao24)
 
             if (existingSnap && existingMarker) {
-                snapshots.set(icao24, { prev: existingSnap.next, next: newSnap })
+                snapshots.set(icao24, {
+                    prev: existingSnap.next,
+                    next: newSnap,
+                })
                 // Rebuild icon only when on-ground status changes (rare)
                 if (existingSnap.next.onGround !== sv.onGround) {
                     existingMarker.setIcon(buildIcon(sv.onGround))
