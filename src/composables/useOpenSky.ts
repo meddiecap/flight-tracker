@@ -18,8 +18,12 @@ let tokenExpiresAt = 0 // Unix ms
 const TOKEN_REFRESH_MARGIN_MS = 60_000
 
 async function getToken(): Promise<string | null> {
-    const clientId = import.meta.env.VITE_OPENSKY_CLIENT_ID as string | undefined
-    const clientSecret = import.meta.env.VITE_OPENSKY_CLIENT_SECRET as string | undefined
+    const clientId = import.meta.env.VITE_OPENSKY_CLIENT_ID as
+        | string
+        | undefined
+    const clientSecret = import.meta.env.VITE_OPENSKY_CLIENT_SECRET as
+        | string
+        | undefined
 
     if (!clientId || !clientSecret) return null // anonymous fallback
 
@@ -40,11 +44,18 @@ async function getToken(): Promise<string | null> {
     })
 
     if (!res.ok) {
-        console.warn("[OpenSky] Token fetch failed:", res.status, res.statusText)
+        console.warn(
+            "[OpenSky] Token fetch failed:",
+            res.status,
+            res.statusText,
+        )
         return null
     }
 
-    const data = (await res.json()) as { access_token: string; expires_in: number }
+    const data = (await res.json()) as {
+        access_token: string
+        expires_in: number
+    }
     cachedToken = data.access_token
     tokenExpiresAt = Date.now() + data.expires_in * 1000
     return cachedToken
@@ -105,7 +116,9 @@ export function useOpenSky() {
             const headers: Record<string, string> = {}
             if (token) headers["Authorization"] = `Bearer ${token}`
 
-            const res = await fetch(`${STATES_URL}?${params.toString()}`, { headers })
+            const res = await fetch(`${STATES_URL}?${params.toString()}`, {
+                headers,
+            })
 
             if (res.status === 429) {
                 const retryAfter = parseInt(
