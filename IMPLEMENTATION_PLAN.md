@@ -133,17 +133,45 @@ Tasks:
 
 ---
 
-## Phase 9 — README
+## Phase 9 — Production proxy + deploy + README
 
-**What:** Portfolio-ready README.
+**What:** Make the app work in production on GitHub Pages (where the Vite dev proxy is not available), deploy, and write a portfolio README.
 
-**Commit:** `docs: add README with demo link and screenshot`
+**Commits:**
+
+- `feat: add Cloudflare Worker CORS proxy for OpenSky`
+- `feat: add GitHub Actions deploy workflow`
+- `docs: add README with demo link and screenshot`
+
+### 9a — Cloudflare Worker CORS proxy
+
+The Vite dev proxy works only locally. In production (GitHub Pages, static hosting) the browser hits OpenSky directly and gets CORS-blocked. Solution: a tiny Cloudflare Worker that proxies the request server-side and adds the correct `Access-Control-Allow-Origin` header.
+
+Tasks:
+
+- Create `worker/opensky-proxy.js` — a minimal Cloudflare Worker that:
+    - Accepts requests to `https://<worker>.workers.dev/api/states/all?…`
+    - Forwards them to `https://opensky-network.org/api/states/all?…`
+    - Returns the response with `Access-Control-Allow-Origin: *`
+- Update `useOpenSky.ts` to use `import.meta.env.VITE_OPENSKY_PROXY_URL` in production and fall back to the Vite proxy path in dev
+- Add `VITE_OPENSKY_PROXY_URL` as a GitHub Actions secret / environment variable
+- Document manual Cloudflare Worker deploy steps in the README (free tier, no credit card)
+
+### 9b — GitHub Actions deploy workflow
+
+Tasks:
+
+- Add `.github/workflows/deploy.yml` — checkout → `bun install` → `bun run build` → upload `dist/` → deploy to GitHub Pages
+- Set `base` in `vite.config.ts` to the repo name (e.g. `/flight-tracker/`)
+
+### 9c — README
 
 Tasks:
 
 - Short description, tech stack table, live demo link (GitHub Pages URL)
-- Screenshot placeholder (to be replaced after deploy)
+- Screenshot (taken after first successful deploy)
 - Local dev instructions (`bun install`, `bun run dev`)
+- Note on the Cloudflare Worker proxy and how to set it up
 
 ---
 
