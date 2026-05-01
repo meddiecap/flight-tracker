@@ -45,6 +45,15 @@ export function useAirportLayer() {
 
     function mount(map: LeafletMap) {
         leafletMap = map
+        // Put airport markers below the default markerPane (z-index 600) so aircraft
+        // markers are always the top-most event target when they overlap an airport.
+        if (!map.getPane("airportPane")) {
+            const pane = map.createPane("airportPane")
+            pane.style.zIndex = "500"
+            // Match default markerPane behaviour: pane itself is not a hit-target;
+            // only interactive marker icons inside it are.
+            pane.style.pointerEvents = "none"
+        }
     }
 
     /** Called when the visible airports set changes (viewport/zoom change). */
@@ -60,9 +69,21 @@ export function useAirportLayer() {
             const existing = markers.get(ap.icao)
 
             if (existing) {
-                // Update icon and tooltip only when nearby count changes
+                // Update colour and tooltip only when nearby count changes.
+                // Mutate SVG DOM directly — avoids marker.setIcon() which calls
+                // Leaflet's _initIcon() (DOM detach → reattach). That detach fires
+                // a synthetic mouseout that never has a matching mouseover, leaving
+                // tooltip open on the wrong marker until the user moves away.
                 if (prevCount !== count) {
-                    existing.setIcon(buildIcon(count > 0))
+                    const el = existing.getElement()
+                    const color = count > 0 ? "#fbbf24" : "#94a3b8"
+                    const circle = el?.querySelector<SVGCircleElement>("circle")
+                    const text = el?.querySelector<SVGTextElement>("text")
+                    if (circle) {
+                        circle.setAttribute("stroke", color)
+                        circle.setAttribute("fill", color)
+                    }
+                    if (text) text.setAttribute("fill", color)
                     existing.setTooltipContent(buildTooltip(ap, count))
                     nearbyCounts.set(ap.icao, count)
                 }
@@ -72,6 +93,7 @@ export function useAirportLayer() {
                     icon: buildIcon(count > 0),
                     keyboard: false,
                     alt: `${ap.name} (${ap.iata || ap.icao})`,
+                    pane: "airportPane",
                 })
                 marker.bindTooltip(buildTooltip(ap, count), {
                     direction: "top",
