@@ -1,6 +1,122 @@
-// Phase 3: live aircraft state and selected flight
 import { defineStore } from "pinia"
+import { ref } from "vue"
+
+/**
+ * Raw state vector as returned by the OpenSky REST API.
+ * https://openskynetwork.github.io/opensky-api/rest.html#response
+ */
+export interface StateVector {
+    icao24: string
+    callsign: string | null
+    originCountry: string
+    timePosition: number | null
+    lastContact: number
+    longitude: number | null
+    latitude: number | null
+    baroAltitude: number | null
+    onGround: boolean
+    velocity: number | null
+    trueTrack: number | null
+    verticalRate: number | null
+    sensors: number[] | null
+    geoAltitude: number | null
+    squawk: string | null
+    spi: boolean
+    positionSource: number
+}
+
+/** Raw tuple from the OpenSky API response */
+type RawVector = [
+    string, // 0  icao24
+    string | null, // 1  callsign
+    string, // 2  origin_country
+    number | null, // 3  time_position
+    number, // 4  last_contact
+    number | null, // 5  longitude
+    number | null, // 6  latitude
+    number | null, // 7  baro_altitude
+    boolean, // 8  on_ground
+    number | null, // 9  velocity
+    number | null, // 10 true_track
+    number | null, // 11 vertical_rate
+    number[] | null, // 12 sensors
+    number | null, // 13 geo_altitude
+    string | null, // 14 squawk
+    boolean, // 15 spi
+    number, // 16 position_source
+]
+
+export function parseVector(raw: RawVector): StateVector {
+    return {
+        icao24: raw[0],
+        callsign: raw[1]?.trim() || null,
+        originCountry: raw[2],
+        timePosition: raw[3],
+        lastContact: raw[4],
+        longitude: raw[5],
+        latitude: raw[6],
+        baroAltitude: raw[7],
+        onGround: raw[8],
+        velocity: raw[9],
+        trueTrack: raw[10],
+        verticalRate: raw[11],
+        sensors: raw[12],
+        geoAltitude: raw[13],
+        squawk: raw[14],
+        spi: raw[15],
+        positionSource: raw[16],
+    }
+}
 
 export const useFlightsStore = defineStore("flights", () => {
-    return {}
+    const aircraft = ref<Map<string, StateVector>>(new Map())
+    const selectedIcao24 = ref<string | null>(null)
+    const fetchError = ref<string | null>(null)
+    const isRateLimited = ref(false)
+    const rateLimitCooldownUntil = ref(0)
+
+    function updateAircraft(vectors: StateVector[]) {
+        const next = new Map<string, StateVector>()
+        for (const v of vectors) {
+            next.set(v.icao24, v)
+        }
+        aircraft.value = next
+    }
+
+    function selectFlight(icao24: string | null) {
+        selectedIcao24.value = icao24
+    }
+
+    function setError(msg: string | null) {
+        fetchError.value = msg
+    }
+
+    function setRateLimit(retryAfterMs: number) {
+        isRateLimited.value = true
+        rateLimitCooldownUntil.value = Date.now() + retryAfterMs
+    }
+
+    function clearRateLimit() {
+        isRateLimited.value = false
+        rateLimitCooldownUntil.value = 0
+    }
+
+    const selectedFlight = () =>
+        selectedIcao24.value
+            ? (aircraft.value.get(selectedIcao24.value) ?? null)
+            : null
+
+    return {
+        aircraft,
+        selectedIcao24,
+        fetchError,
+        isRateLimited,
+        rateLimitCooldownUntil,
+        updateAircraft,
+        selectFlight,
+        setError,
+        setRateLimit,
+        clearRateLimit,
+        selectedFlight,
+    }
 })
