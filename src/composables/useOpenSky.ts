@@ -5,12 +5,20 @@ import type { RawVector } from "../stores/flights"
 
 const POLL_INTERVAL_MS = 30_000
 
-// Routed through the Vite dev-server proxy (/api/opensky → https://opensky-network.org).
-const STATES_URL = "/api/opensky/api/states/all"
+// In production, VITE_OPENSKY_PROXY_URL points to the Cloudflare Worker
+// (e.g. https://opensky-proxy.<subdomain>.workers.dev).
+// In dev, fall back to the Vite dev-server proxy path.
+const PROXY_BASE = (import.meta.env.VITE_OPENSKY_PROXY_URL as string | undefined)?.replace(/\/$/, "") ?? ""
+const STATES_URL = PROXY_BASE
+    ? `${PROXY_BASE}/api/states/all`
+    : "/api/opensky/api/states/all"
 
-// OAuth2 token endpoint, proxied through Vite to avoid CORS.
-const TOKEN_URL =
-    "/api/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token"
+// OAuth2 token endpoint.
+// In dev: proxied via Vite to avoid CORS on localhost.
+// In production: the auth server allows cross-origin POST directly.
+const TOKEN_URL = PROXY_BASE
+    ? "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
+    : "/api/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token"
 
 // --- Module-level token cache (one token shared across all composable instances) ---
 let cachedToken: string | null = null
