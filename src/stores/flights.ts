@@ -83,6 +83,7 @@ export const useFlightsStore = defineStore("flights", () => {
     const fetchError = ref<string | null>(null)
     const isRateLimited = ref(false)
     const rateLimitCooldownUntil = ref(0)
+    const pollVersion = ref(0)
 
     function updateAircraft(vectors: StateVector[]) {
         const map = aircraft.value
@@ -97,6 +98,7 @@ export const useFlightsStore = defineStore("flights", () => {
         }
         // Manually trigger reactivity — ref does not track Map mutations
         triggerRef(aircraft)
+        pollVersion.value++
     }
 
     function selectFlight(icao24: string | null) {
@@ -128,6 +130,7 @@ export const useFlightsStore = defineStore("flights", () => {
         fetchError,
         isRateLimited,
         rateLimitCooldownUntil,
+        pollVersion,
         updateAircraft,
         selectFlight,
         setError,

@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { ref, watch, onUnmounted } from "vue"
 import { LMap, LTileLayer } from "@vue-leaflet/vue-leaflet"
 import type { Map as LeafletMap } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { useOpenSky } from "../composables/useOpenSky"
-import { useInterpolation } from "../composables/useInterpolation"
+import { useAircraftLayer } from "../composables/useAircraftLayer"
 import { useFlightsStore } from "../stores/flights"
-import AircraftMarker from "../components/AircraftMarker.vue"
 import FlightPanel from "../components/FlightPanel.vue"
 import StatsBar from "../components/StatsBar.vue"
 import AirportMarker from "../components/AirportMarker.vue"
@@ -23,21 +22,20 @@ const tileAttribution =
 const flightsStore = useFlightsStore()
 const airportsStore = useAirportsStore()
 const { start: startPolling } = useOpenSky()
-const { positions, start: startInterp, updateFromStore } = useInterpolation()
+const aircraftLayer = useAircraftLayer()
 
-// Feed interpolation when the aircraft map updates after each poll
+// After each poll: update aircraft markers and airports nearby count
 watch(
-    () => flightsStore.aircraft,
-    (aircraft) => {
-        updateFromStore(aircraft)
-        airportsStore.setAircraft(aircraft)
+    () => flightsStore.pollVersion,
+    () => {
+        aircraftLayer.update(flightsStore.aircraft)
+        airportsStore.setAircraft(flightsStore.aircraft)
     },
-    { deep: false },
 )
 
 function onMapReady(map: LeafletMap) {
     startPolling(map)
-    startInterp()
+    aircraftLayer.mount(map, (icao24) => flightsStore.selectFlight(icao24))
     const syncBounds = () => {
         const b = map.getBounds()
         airportsStore.setViewBounds(b.getSouth(), b.getNorth(), b.getWest(), b.getEast())
@@ -48,11 +46,7 @@ function onMapReady(map: LeafletMap) {
     map.on("zoomend", syncBounds)
 }
 
-function onMarkerClick(icao24: string) {
-    flightsStore.selectFlight(icao24)
-}
-
-const interpolatedList = positions
+onUnmounted(() => aircraftLayer.unmount())
 </script>
 
 <template>
@@ -61,10 +55,6 @@ const interpolatedList = positions
             @click="flightsStore.selectFlight(null)">
             <LTileLayer :url="tileUrl" :attribution="tileAttribution" layer-type="base" name="CartoDB Dark"
                 :max-zoom="19" />
-
-            <AircraftMarker v-for="pos in interpolatedList" :key="pos.icao24" :icao24="pos.icao24" :lat="pos.lat"
-                :lng="pos.lng" :true-track="pos.trueTrack" :on-ground="pos.onGround"
-                :callsign="flightsStore.aircraft.get(pos.icao24)?.callsign ?? null" @click="onMarkerClick" />
 
             <AirportMarker v-for="ap in airportsStore.visibleAirports" :key="ap.icao" :icao="ap.icao" :iata="ap.iata"
                 :name="ap.name" :lat="ap.lat" :lng="ap.lng"
@@ -75,3 +65,4 @@ const interpolatedList = positions
         <FlightPanel />
     </div>
 </template>
+
